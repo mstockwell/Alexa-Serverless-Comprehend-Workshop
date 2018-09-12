@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Serverless Specification template describing Twitter_Sentiment_Analysis.
+Resources:
+  TwitterSentimentAnalysis:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: 'Twitter_Sentiment_Analysis'
+      Description: 'Determine overall sentiment of related tweets'
+      Handler: lambda_function.lambda_handler
+      MemorySize: 128
+      Role: !ImportValue WorkshopLambdaRoleARN
+      Runtime: python3.6
+      Timeout: 60
+      Environment:
+        Variables:
+          TWEET_TABLE: Tweets_Table
+          STATS_TABLE: Twitter_Stats_Table

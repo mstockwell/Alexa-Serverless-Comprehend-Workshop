@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Serverless Specification template describing Import_Twitter_Table function
+Resources:
+  ImportTwitterTable:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: 'Import_Twitter_Table'
+      Description: 'Utility to import historic Twitter data'
+      Handler: lambda_function.lambda_handler
+      MemorySize: 512
+      Role: !ImportValue WorkshopLambdaRoleARN
+      Runtime: python3.6
+      Timeout: 90
+      Environment:
+        Variables:
+          TWEET_TABLE: Tweets_Table
+          STATS_TABLE: Twitter_Stats_Table
+          S3_BUCKET_NAME: S3_BUCKET_NAME
+          TEMP_IMPORT_FILE: '/tmp/import_file'
+          JSON_IMPORT_FILE_NAME: twitter_table_export.json
+          SINCEID: '999999999999999999'

@@ -1,0 +1,92 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "corp analytics",
+            "intents": [
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": [
+                        "stop request",
+                        "cancel request"
+                    ]
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": [
+                        "End analytics",
+                        "Stop analytics",
+                        "Stop corp analytics"
+                    ]
+                },
+                {
+                    "name": "TotalTweets",
+                    "slots": [
+                        {
+                            "name": "name",
+                            "type": "Statistics"
+                        }
+                    ],
+                    "samples": [
+                        "How many {name} does corporation have",
+                        "How many {name} are there",
+                        "What is the {name}",
+                        "What is the value for {name} ",
+                        "What's the {name}"
+                    ]
+                },
+                {
+                    "name": "SpecificTweet",
+                    "slots": [
+                        {
+                            "name": "tweetType",
+                            "type": "TweetTypes"
+                        }
+                    ],
+                    "samples": [
+                        "Get the {tweetType} tweet",
+                        "Tell me the {tweetType} tweet",
+                        "What is the {tweetType} tweet on corporation",
+                        "What is the {tweetType} concerning corporation",
+                        "What's the {tweetType} tweet"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "Statistics",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "Total Tweets"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "TweetTypes",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "Most ReTweeted"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Most Favorited"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Most Recent"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

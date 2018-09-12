@@ -1,0 +1,168 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: AWS Serverless Specification describing workshop for Social Media Analytics Application.
+Resources:
+  WorkshopLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: "Allow"
+            Principal:
+              Service: 
+                - "lambda.amazonaws.com"
+            Action:  
+              - sts:AssumeRole
+      RoleName: "Workshop_Lambda_Role"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "Workshop_Lambda_Policy"
+          PolicyDocument: 
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+  RootInstanceProfile: 
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles: 
+        -
+          Ref: "WorkshopLambdaRole"            
+  TweetsTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: 'Tweets_Table'
+      AttributeDefinitions:
+        -
+          AttributeName: 'tweetid'
+          AttributeType: 'N'
+      KeySchema:
+        -
+          AttributeName: 'tweetid'
+          KeyType: 'HASH'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 10
+        WriteCapacityUnits: 2
+      StreamSpecification:
+        StreamViewType: 'NEW_IMAGE'
+  TweetStatsTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: 'Twitter_Stats_Table'
+      AttributeDefinitions:
+        -
+          AttributeName: 'name'
+          AttributeType: 'S'
+      KeySchema:
+        -
+          AttributeName: 'name'
+          KeyType: 'HASH'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 10
+        WriteCapacityUnits: 2
+  AlexaSkill:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: 'Alexa_Skill'
+      Description: 'Provides Alexa Responses to Queries based on tweets search criteria'
+      Handler: lambda_function.lambda_handler
+      CodeUri: ./Alexa_Skill
+      MemorySize: 128
+      Role: !GetAtt WorkshopLambdaRole.Arn
+      Runtime: python3.6
+      Timeout: 3
+      Environment:
+        Variables:
+          STATS_TABLE: !Ref TweetStatsTable
+          SLOT_NAME: name
+          GREETING_MSG: Welcome to your corporate social media analytics. How may I assist you?
+          EXIT_MSG: Thanks and have a wonderful day!
+          EXCEPTION_MSG: I'm sorry, I did not understand the request. Please ask again.
+  PollTwitter:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: 'Poll_Twitter'
+      Description: 'Called on a regular frequency to check for recent Tweets'
+      Handler: lambda_function.lambda_handler
+      CodeUri: ./Poll_Twitter
+      MemorySize: 128
+      Role: !GetAtt WorkshopLambdaRole.Arn
+      Runtime: python3.6
+      Timeout: 60
+      Environment:
+        Variables:
+          SEARCH_TEXT: '#AWSSMAWS OR #AMAZON OR $AMZN OR from:AMAZON OR @AWS'
+          STATS_TABLE: !Ref TweetStatsTable
+          TWEET_TABLE: !Ref TweetsTable
+          SECRETNAME: twittercredentials
+          SECRETREGION: us-east-1
+          SECRETENDPOINT: https://secretsmanager.us-east-1.amazonaws.com
+  ScheduledRule: 
+    Type: "AWS::Events::Rule"
+    Properties: 
+      Description: "ScheduledRule"
+      ScheduleExpression: "rate(1 minute)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "PollTwitter"
+              - "Arn"
+          Id: "TargetFunctionV1"
+  PermissionForEventsToInvokeLambda: 
+   Type: "AWS::Lambda::Permission"
+   Properties: 
+      FunctionName: 
+        Ref: "PollTwitter"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "ScheduledRule"
+          - "Arn" 
+  UpdateTwitterStatistics:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: 'Update_Twitter_Stats'
+      Description: An Amazon DynamoDB trigger that logs the updates made to a tweets table.
+      Handler: lambda_function.lambda_handler
+      CodeUri: ./Update_Twitter_Statistics
+      MemorySize: 128
+      Role: !GetAtt WorkshopLambdaRole.Arn
+      Runtime: python3.6
+      Timeout: 10
+      Environment:
+        Variables:
+          TWEET_TABLE: !Ref TweetsTable
+          STATS_TABLE: !Ref TweetStatsTable
+  DDBStreamTwo:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1 
+      Enabled: True
+      EventSourceArn: !GetAtt TweetsTable.StreamArn
+      FunctionName: 
+        Fn::GetAtt: [ UpdateTwitterStatistics , Arn ]
+      StartingPosition: LATEST    
+Outputs:
+  PollTwitterFunction:
+    Description: "PollTwitter Function"
+    Value: !GetAtt PollTwitter.Arn
+    Export:
+      Name: "PollTwitterFunctionArn"
+  ScheduledRuleEvent:
+    Description: "Cloudwatch Schedule Twitter Polling Event"
+    Value: !GetAtt ScheduledRule.Arn
+    Export:
+      Name: "CloudwatchScheduledEventArn"  
+  WorkshopLambdaRole:
+    Description: "Lambda Role for workshop Lambdas"
+    Value: !GetAtt WorkshopLambdaRole.Arn
+    Export:
+      Name: WorkshopLambdaRoleARN
